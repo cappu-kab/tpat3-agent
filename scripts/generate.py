@@ -1,7 +1,8 @@
 """Generate the TPAT3 daily digest or weekly quiz.
 
 Usage: python scripts/generate.py digest|quiz
-Worker (Sonnet) drafts with web search; Opus reviews (quiz always, digest on Sundays).
+Worker (Groq gpt-oss-120b, low reasoning, browser_search) drafts; the same model at high reasoning reviews
+(quiz always, digest on Sundays).
 Exits non-zero when validation fails so the workflow never sends a bad item.
 """
 import datetime
@@ -9,13 +10,16 @@ import json
 import pathlib
 import re
 import sys
+import urllib.error
+import urllib.request
 import zoneinfo
 
-import anthropic
+import groq
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-WORKER = "claude-sonnet-5-5"
-PLANNER = "claude-opus-5-5"
+MODEL = "openai/gpt-oss-120b"
+WORKER = "low"  # reasoning_effort per role
+PLANNER = "high"
 TH_MONTHS = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
 _client = None
 
@@ -23,7 +27,7 @@ _client = None
 def client():
     global _client
     if _client is None:
-        _client = anthropic.Anthropic()
+        _client = groq.Groq(max_retries=5)
     return _client
 
 
@@ -39,22 +43,37 @@ def th_date(d):
     return f"{d.day} {TH_MONTHS[d.month - 1]} {d.year}"
 
 
-def ask(model, system, user, tag, search=False, max_tokens=8000):
-    """One call; returns the text inside <tag>...</tag> (model narration while searching is discarded)."""
-    kwargs = {}
-    if search:
-        kwargs["tools"] = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 10}]
-    messages = [{"role": "user", "content": user}]
-    for _ in range(6):
-        r = client().messages.create(model=model, max_tokens=max_tokens, system=system, messages=messages, **kwargs)
-        if r.stop_reason != "pause_turn":
-            break
-        messages.append({"role": "assistant", "content": r.content})
-    text = "".join(b.text for b in r.content if b.type == "text")
+def ask(effort, system, user, tag, search=False, max_tokens=16000):
+    """One call; returns the text inside <tag>...</tag> (search narration and citation markers are discarded)."""
+    kwargs = {"tools": [{"type": "browser_search"}], "tool_choice": "required"} if search else {}
+    r = client().chat.completions.create(
+        model=MODEL,
+        messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+        reasoning_effort=effort,
+        max_completion_tokens=max_tokens,
+        **kwargs,
+    )
+    text = re.sub(r"【[^】]*】", "", r.choices[0].message.content or "")
     m = re.search(rf"<{tag}>(.*?)</{tag}>", text, re.S)
     if not m:
         raise RuntimeError(f"no <{tag}> block in model output")
     return m.group(1).strip()
+
+
+def loads(s):
+    return json.loads(re.sub(r"^```(?:json)?\s*|\s*```$", "", s.strip()))
+
+
+def url_dead(url):
+    """True only when the page clearly does not exist (404/410/DNS failure); bot blocks (403/429/5xx) are tolerated."""
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    try:
+        urllib.request.urlopen(req, timeout=15).close()
+    except urllib.error.HTTPError as e:
+        return e.code in (404, 410)
+    except Exception:
+        return True
+    return False
 
 
 def review(kind, content):
@@ -67,7 +86,7 @@ def review(kind, content):
         "review",
         max_tokens=2000,
     )
-    return json.loads(out)
+    return loads(out)
 
 
 # ---------- digest ----------
@@ -84,6 +103,10 @@ def digest_issues(md):
         news += 1
         if not re.search(r"https?://\S+", it) or not re.search(r"\(.*(20\d\d|25\d\d).*\)", it.split("แหล่งข่าว")[-1]):
             issues.append(f"news item lacks source URL + dated source line: {title}")
+        else:
+            url = re.search(r"https?://[^\s,)]+", it).group(0)
+            if url_dead(url):
+                issues.append(f"source URL does not resolve (404/unreachable), replace with a real one: {url}")
     if "จุดสำคัญที่ควรจำ" not in md:
         issues.append("missing keyword block")
     if news == 0:
@@ -184,18 +207,18 @@ misconceptions, not absurd; no options that are also true; correct answers sprea
 {material}
 --- topics.md ---
 {read('config/topics.md')}"""
-    qs = json.loads(ask(WORKER, system, user, "quiz"))
+    qs = loads(ask(WORKER, system, user, "quiz"))
     for _ in range(2):
         issues = quiz_issues(qs)
         if not issues:
             break
-        qs = json.loads(ask(WORKER, system, user + f"\n\nPrevious JSON:\n{json.dumps(qs, ensure_ascii=False)}\n\nFix:\n{issues}", "quiz"))
+        qs = loads(ask(WORKER, system, user + f"\n\nPrevious JSON:\n{json.dumps(qs, ensure_ascii=False)}\n\nFix:\n{issues}", "quiz"))
     issues = quiz_issues(qs)
     if issues:
         sys.exit(f"quiz validation failed: {issues}")
     rv = review("quiz (check every answer key is correct and unique)", json.dumps(qs, ensure_ascii=False, indent=1) + "\n\nSource digests:\n" + material)
     if not rv["approved"]:
-        qs = json.loads(ask(WORKER, system, user + f"\n\nPrevious JSON:\n{json.dumps(qs, ensure_ascii=False)}\n\nReviewer issues to fix:\n{rv['issues']}", "quiz"))
+        qs = loads(ask(WORKER, system, user + f"\n\nPrevious JSON:\n{json.dumps(qs, ensure_ascii=False)}\n\nReviewer issues to fix:\n{rv['issues']}", "quiz"))
         issues = quiz_issues(qs)
         if issues:
             sys.exit(f"revised quiz validation failed: {issues}")
