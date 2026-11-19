@@ -8,6 +8,7 @@ Exits non-zero when validation fails so the workflow never sends a bad item.
 import datetime
 import json
 import pathlib
+import random
 import re
 import sys
 import urllib.error
@@ -170,6 +171,22 @@ Do NOT reuse these URLs: {used_urls[-40:]}. Recent foundational topics (pick a d
 
 
 # ---------- quiz ----------
+def balance(qs):
+    """LLMs put the correct option first almost every time, so spread the correct positions in code."""
+    if not isinstance(qs, list):
+        return qs
+    valid = [q for q in qs if isinstance(q, dict) and isinstance(q.get("o"), list) and len(q["o"]) == 5
+             and isinstance(q.get("a"), int) and 0 <= q["a"] < 5]
+    targets = (list(range(5)) * (len(valid) // 5 + 1))[: len(valid)]
+    random.shuffle(targets)
+    for q, t in zip(valid, targets):
+        right = q["o"][q["a"]]
+        rest = [o for i, o in enumerate(q["o"]) if i != q["a"]]
+        q["o"] = rest[:t] + [right] + rest[t:]
+        q["a"] = t
+    return qs
+
+
 def quiz_issues(qs):
     issues = []
     if not isinstance(qs, list) or not 8 <= len(qs) <= 12:
@@ -201,24 +218,24 @@ def make_quiz():
 About 6 from the digests below (use their หลักการ/ผลกระทบ lines and numbers; include 1 numeracy question), about 4 foundational
 (topics.md; established science only). Test understanding (why/how/cause-effect), not recall.
 Rules learned in review: all 5 options similar length and structure (the correct one must NOT be the longest); distractors are plausible
-misconceptions, not absurd; no options that are also true; correct answers spread across A-E (each at most twice); tag like 'ข่าว: ...' or 'ความรู้พื้นฐาน: ...'.
+misconceptions, not absurd; no options that are also true; put the CORRECT option FIRST in o and set a to 0 (the program shuffles positions afterwards, so options and the explanation must never refer to letters or other options such as 'ทั้งข้อ ก และ ข' / 'ถูกทุกข้อ'); tag like 'ข่าว: ...' or 'ความรู้พื้นฐาน: ...'.
 
 --- digests ---
 {material}
 --- topics.md ---
 {read('config/topics.md')}"""
-    qs = loads(ask(WORKER, system, user, "quiz"))
+    qs = balance(loads(ask(WORKER, system, user, "quiz")))
     for _ in range(2):
         issues = quiz_issues(qs)
         if not issues:
             break
-        qs = loads(ask(WORKER, system, user + f"\n\nPrevious JSON:\n{json.dumps(qs, ensure_ascii=False)}\n\nFix:\n{issues}", "quiz"))
+        qs = balance(loads(ask(WORKER, system, user + f"\n\nPrevious JSON:\n{json.dumps(qs, ensure_ascii=False)}\n\nFix:\n{issues}", "quiz")))
     issues = quiz_issues(qs)
     if issues:
         sys.exit(f"quiz validation failed: {issues}")
     rv = review("quiz (check every answer key is correct and unique)", json.dumps(qs, ensure_ascii=False, indent=1) + "\n\nSource digests:\n" + material)
     if not rv["approved"]:
-        qs = loads(ask(WORKER, system, user + f"\n\nPrevious JSON:\n{json.dumps(qs, ensure_ascii=False)}\n\nReviewer issues to fix:\n{rv['issues']}", "quiz"))
+        qs = balance(loads(ask(WORKER, system, user + f"\n\nPrevious JSON:\n{json.dumps(qs, ensure_ascii=False)}\n\nReviewer issues to fix:\n{rv['issues']}", "quiz")))
         issues = quiz_issues(qs)
         if issues:
             sys.exit(f"revised quiz validation failed: {issues}")
