@@ -19,31 +19,72 @@ concurrency:
   group: tpat3
 
 jobs:
-  run:
+  generate:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      KIND: ${{ github.event.inputs.kind || (github.event.schedule == '30 1 * * 0' && 'quiz' || 'digest') }}
+    outputs:
+      kind: ${{ steps.kind.outputs.kind }}
     steps:
+      - id: kind
+        run: echo "kind=${{ github.event.inputs.kind || (github.event.schedule == '30 1 * * 0' && 'quiz' || 'digest') }}" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install groq markdown
+      - run: pip install groq
       - name: Generate
-        run: python scripts/generate.py "$KIND"
+        run: python scripts/generate.py "${{ steps.kind.outputs.kind }}"
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-      - name: Send email
-        run: python scripts/send.py "$KIND"
-        env:
-          GMAIL_USER: ${{ secrets.GMAIL_USER }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          MAIL_TO: ${{ secrets.MAIL_TO }}
       - name: Commit outputs
         run: |
           git config user.name "tpat3-bot"
           git config user.email "tpat3-bot@users.noreply.github.com"
           git add digests quizzes state
-          git diff --cached --quiet || git commit -m "chore: $KIND $(date -u +%F)"
+          git diff --cached --quiet || git commit -m "chore: ${{ steps.kind.outputs.kind }} $(date -u +%F)"
           git push
+
+  deploy:
+    needs: generate
+    if: needs.generate.outputs.kind == 'quiz'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python scripts/build_site.py
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  send:
+    needs: [generate, deploy]
+    if: ${{ !cancelled() && needs.generate.result == 'success' && (needs.deploy.result == 'success' || needs.deploy.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install markdown
+      - name: Send email
+        run: python scripts/send.py "${{ needs.generate.outputs.kind }}"
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
