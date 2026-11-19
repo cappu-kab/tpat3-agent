@@ -47,14 +47,21 @@ def th_date(d):
 def ask(effort, system, user, tag, search=False, max_tokens=16000):
     """One call; returns the text inside <tag>...</tag> (search narration and citation markers are discarded)."""
     kwargs = {"tools": [{"type": "browser_search"}], "tool_choice": "required"} if search else {}
-    for attempt in range(2):
-        r = client().chat.completions.create(
-            model=MODEL,
-            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-            reasoning_effort=effort,
-            max_completion_tokens=max_tokens,
-            **kwargs,
-        )
+    problem = ""
+    for attempt in range(4):
+        try:
+            r = client().chat.completions.create(
+                model=MODEL,
+                messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+                reasoning_effort=effort,
+                max_completion_tokens=max_tokens,
+                **kwargs,
+            )
+        except groq.BadRequestError as e:  # gpt-oss sometimes emits a malformed browser_search call; a retry usually works
+            if "output_parse_failed" not in str(e):
+                raise
+            problem = f"groq output_parse_failed: {str(e)[:200]}"
+            continue
         text = re.sub(r"【[^】]*】", "", r.choices[0].message.content or "")
         m = re.search(rf"<{tag}>(.*?)</{tag}>", text, re.S)
         if m:
@@ -63,10 +70,8 @@ def ask(effort, system, user, tag, search=False, max_tokens=16000):
             m = re.search(r"\{.*\}" if tag == "review" else r"\[.*", text, re.S)
             if m:
                 return m.group(0)
-    raise RuntimeError(
-        f"no <{tag}> block after 2 attempts (finish_reason={r.choices[0].finish_reason}, "
-        f"{len(text)} chars): {text[:300]!r}"
-    )
+        problem = f"no <{tag}> block (finish_reason={r.choices[0].finish_reason}, {len(text)} chars): {text[:300]!r}"
+    raise RuntimeError(f"model call failed after 4 attempts: {problem}")
 
 
 def loads(s):
