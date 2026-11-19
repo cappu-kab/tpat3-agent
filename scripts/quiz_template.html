@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แบบทดสอบ TPAT3 ข่าวสารและความรู้ {{DATE_TH}}</title>
+<style>
+:root{--bg:#f4f6fa;--card:#fff;--text:#1d2433;--muted:#5a6578;--line:#cfd6e3;--ok:#1e8e4e;--okbg:#e3f6ea;--bad:#c62828;--badbg:#fde8e8;--pri:#2457c5}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Sarabun","Noto Sans Thai","Leelawadee UI","Tahoma",system-ui,sans-serif;font-size:17px;line-height:1.6}
+.wrap{max-width:760px;margin:0 auto;padding:16px}
+h1{font-size:1.35rem;margin:8px 0 4px}
+.sub{color:var(--muted);font-size:.95rem;margin-bottom:12px}
+.bar{position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:2;font-weight:600}
+.prog{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:6px}
+.prog i{display:block;height:100%;width:0;background:var(--pri);transition:width .3s}
+.q{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:14px 0}
+.q h2{font-size:1.05rem;margin:0 0 10px;line-height:1.55}
+.tag{display:inline-block;font-size:.78rem;color:var(--pri);background:#e6edfb;border-radius:6px;padding:1px 8px;margin-bottom:6px}
+.opt{display:flex;gap:10px;width:100%;text-align:left;background:#fff;color:var(--text);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;font:inherit;cursor:pointer}
+.opt:hover:not(:disabled){border-color:var(--pri);background:#f3f7ff}
+.opt b{flex:0 0 1.6em}
+.opt:disabled{cursor:default;color:var(--text);opacity:1}
+.opt.correct{background:var(--okbg);border-color:var(--ok)}
+.opt.wrong{background:var(--badbg);border-color:var(--bad)}
+.exp{margin-top:10px;padding:10px 12px;border-radius:10px;background:#f1f3f8;border-left:4px solid var(--pri);font-size:.96rem}
+.exp .res{font-weight:700;margin-bottom:4px}
+.exp .res.ok{color:var(--ok)}.exp .res.no{color:var(--bad)}
+#sum{display:none;background:var(--card);border:2px solid var(--pri);border-radius:12px;padding:18px;text-align:center;margin:18px 0}
+#sum .big{font-size:2rem;font-weight:700;color:var(--pri)}
+button.restart{font:inherit;background:var(--pri);color:#fff;border:0;border-radius:10px;padding:10px 22px;cursor:pointer;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>แบบทดสอบ TPAT3 ข่าวสารและความรู้</h1>
+  <div class="sub">ประจำวันที่ {{DATE_TH}} · 10 ข้อ · เลือกคำตอบแล้วล็อกทันที พร้อมเฉลย</div>
+  <div class="bar"><span id="count">ตอบแล้ว 0 / 10</span><div class="prog"><i id="pb"></i></div></div>
+  <div id="list"></div>
+  <div id="sum"></div>
+</div>
+<script>
+const QUESTIONS = {{QUESTIONS_JSON}};
+
+const L="ABCDE";
+const list=document.getElementById("list"),sum=document.getElementById("sum");
+let answered,score;
+
+function esc(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+
+function build(){
+  answered=0;score=0;sum.style.display="none";
+  list.innerHTML="";
+  QUESTIONS.forEach((x,i)=>{
+    const d=document.createElement("div");d.className="q";
+    d.innerHTML='<span class="tag">'+esc(x.tag)+'</span><h2>'+(i+1)+'. '+esc(x.q)+'</h2>'+
+      x.o.map((t,j)=>'<button class="opt" data-j="'+j+'"><b>'+L[j]+'.</b><span>'+esc(t)+'</span></button>').join("")+
+      '<div class="exp" hidden></div>';
+    d.querySelectorAll(".opt").forEach(b=>b.addEventListener("click",()=>pick(d,x,+b.dataset.j)));
+    list.appendChild(d);
+  });
+  upd();
+}
+
+function pick(d,x,j){
+  const bs=d.querySelectorAll(".opt");
+  bs.forEach(b=>b.disabled=true);
+  bs[x.a].classList.add("correct");
+  const ok=j===x.a;
+  if(!ok)bs[j].classList.add("wrong");
+  const ex=d.querySelector(".exp");
+  ex.hidden=false;
+  ex.innerHTML='<div class="res '+(ok?'ok':'no')+'">'+(ok?'ถูกต้อง':'ไม่ถูกต้อง')+' · คำตอบที่ถูกคือ '+L[x.a]+'</div>'+esc(x.e);
+  answered++;if(ok)score++;
+  upd();
+  if(answered===QUESTIONS.length)finish();
+}
+
+function upd(){
+  document.getElementById("count").textContent="ตอบแล้ว "+answered+" / "+QUESTIONS.length;
+  document.getElementById("pb").style.width=(answered/QUESTIONS.length*100)+"%";
+}
+
+function finish(){
+  const p=Math.round(score/QUESTIONS.length*100);
+  sum.innerHTML='<div>สรุปผล</div><div class="big">'+score+' / '+QUESTIONS.length+'</div><div>คิดเป็น '+p+'%</div>'+
+    '<button class="restart" id="rs">เริ่มใหม่</button>';
+  sum.style.display="block";
+  document.getElementById("rs").addEventListener("click",()=>{build();window.scrollTo({top:0,behavior:"smooth"})});
+  sum.scrollIntoView({behavior:"smooth",block:"center"});
+}
+
+build();
+</script>
+</body>
+</html>
