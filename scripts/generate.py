@@ -60,7 +60,7 @@ def ask(effort, system, user, tag, search=False, max_tokens=16000):
         if m:
             return m.group(1).strip()
         if tag in ("review", "quiz"):  # model sometimes drops the tags but still returns bare JSON
-            m = re.search(r"\{.*\}" if tag == "review" else r"\[.*\]", text, re.S)
+            m = re.search(r"\{.*\}" if tag == "review" else r"\[.*", text, re.S)
             if m:
                 return m.group(0)
     raise RuntimeError(
@@ -179,6 +179,46 @@ Do NOT reuse these URLs: {used_urls[-40:]}. Recent foundational topics (pick a d
 
 
 # ---------- quiz ----------
+def parse_quiz(text):
+    """Lenient JSON-array reader: keeps every complete object, tolerating fences, trailing commas,
+    a missing closing bracket, or a truncated/garbled tail."""
+    text = re.sub(r"```(?:json)?", "", text)
+    i = text.find("[")
+    if i < 0:
+        raise ValueError("no JSON array in reply")
+    dec, out, i = json.JSONDecoder(), [], i + 1
+    while True:
+        while i < len(text) and text[i] in " \t\r\n,":
+            i += 1
+        if i >= len(text) or text[i] != "{":
+            break
+        try:
+            obj, i = dec.raw_decode(text, i)
+        except json.JSONDecodeError:
+            break
+        out.append(obj)
+    if not out:
+        raise ValueError("no complete JSON object in reply")
+    return out
+
+
+def draft_quiz(system, user):
+    note = ""
+    for _ in range(3):
+        try:
+            qs = parse_quiz(ask(WORKER, system, user + note, "quiz"))
+            if len(qs) >= 8:
+                return balance(qs)
+            raise ValueError(f"only {len(qs)} complete questions parsed")
+        except (ValueError, RuntimeError) as e:
+            err = e
+            note = (
+                f"\n\nYour previous reply was rejected ({str(e)[:200]}). Return ONLY a valid JSON array of 10 complete objects. "
+                'Escape any double quote inside a string as \\" or use Thai quotes “ ”; no trailing commas; keep explanations short.'
+            )
+    raise err
+
+
 def balance(qs):
     """LLMs put the correct option first almost every time, so spread the correct positions in code."""
     if not isinstance(qs, list):
@@ -218,7 +258,9 @@ def make_quiz():
     digests = sorted((ROOT / "digests").glob("*.md"))[-7:]
     material = "\n\n".join(p.read_text(encoding="utf-8") for p in digests)
     system = (
-        "You are the Worker writing a Thai TPAT3 weekly quiz. Output a JSON array inside <quiz> tags, no other text. "
+        "You are the Worker writing a Thai TPAT3 weekly quiz. Output ONLY one strictly valid JSON array inside <quiz></quiz> tags: "
+        "no markdown fences, no comments, no trailing commas, no line breaks inside strings, and any double quote inside a string must be escaped with a backslash "
+        "(prefer Thai quotes “ ” instead). Start with [ and end with ]. "
         "All text Thai (English only in parentheses/proper nouns). Never invent facts."
     )
     user = f"""Write 10 multiple-choice questions, exactly 5 options each, as objects
@@ -232,18 +274,18 @@ misconceptions, not absurd; no options that are also true; put the CORRECT optio
 {material}
 --- topics.md ---
 {read('config/topics.md')}"""
-    qs = balance(loads(ask(WORKER, system, user, "quiz")))
+    qs = draft_quiz(system, user)
     for _ in range(2):
         issues = quiz_issues(qs)
         if not issues:
             break
-        qs = balance(loads(ask(WORKER, system, user + f"\n\nPrevious JSON:\n{json.dumps(qs, ensure_ascii=False)}\n\nFix:\n{issues}", "quiz")))
+        qs = draft_quiz(system, user + f"\n\nPrevious JSON:\n{json.dumps(qs, ensure_ascii=False)}\n\nFix:\n{issues}")
     issues = quiz_issues(qs)
     if issues:
         sys.exit(f"quiz validation failed: {issues}")
     rv = review("quiz (check every answer key is correct and unique)", json.dumps(qs, ensure_ascii=False, indent=1) + "\n\nSource digests:\n" + material)
     if not rv["approved"]:
-        qs = balance(loads(ask(WORKER, system, user + f"\n\nPrevious JSON:\n{json.dumps(qs, ensure_ascii=False)}\n\nReviewer issues to fix:\n{rv['issues']}", "quiz")))
+        qs = draft_quiz(system, user + f"\n\nPrevious JSON:\n{json.dumps(qs, ensure_ascii=False)}\n\nReviewer issues to fix:\n{rv['issues']}")
         issues = quiz_issues(qs)
         if issues:
             sys.exit(f"revised quiz validation failed: {issues}")
