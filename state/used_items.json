@@ -1,6 +1,44 @@
 [
-  {"url": "https://science.nasa.gov/blogs/science-news/2026/11/17/nasas-terra-mission-to-end/", "topic": "ดาวเทียมสำรวจโลก Terra", "date": "2026-11-17", "digest": "2026-11-19"},
-  {"url": "https://www.nationthailand.com/business/40071999", "topic": "NSTDA 10 emerging technologies", "date": "2026-10-08", "digest": "2026-11-19"},
-  {"url": "https://www.iea.org/news/close-to-30-of-cars-sold-this-year-are-set-to-be-electric-as-countries-and-consumers-respond-to-energy-crisis", "topic": "แบตเตอรี่ EV / Global EV Outlook 2026", "date": "2026-05-20", "digest": "2026-11-19"},
-  {"url": "foundational:SMR", "topic": "SMR", "date": "2026-11-19", "digest": "2026-11-19"}
+ {
+  "url": "https://science.nasa.gov/blogs/science-news/2026/11/17/nasas-terra-mission-to-end/",
+  "topic": "ดาวเทียมสำรวจโลก Terra",
+  "date": "2026-11-17",
+  "digest": "2026-11-19"
+ },
+ {
+  "url": "https://www.nationthailand.com/business/40071999",
+  "topic": "NSTDA 10 emerging technologies",
+  "date": "2026-10-08",
+  "digest": "2026-11-19"
+ },
+ {
+  "url": "https://www.iea.org/news/close-to-30-of-cars-sold-this-year-are-set-to-be-electric-as-countries-and-consumers-respond-to-energy-crisis",
+  "topic": "แบตเตอรี่ EV / Global EV Outlook 2026",
+  "date": "2026-05-20",
+  "digest": "2026-11-19"
+ },
+ {
+  "url": "foundational:SMR",
+  "topic": "SMR",
+  "date": "2026-11-19",
+  "digest": "2026-11-19"
+ },
+ {
+  "url": "https://www.reuters.com/business/energy/thailand-doubles-capacity-public-solar-power-scheme-10-gw-official-says-2026-09-18/",
+  "topic": "1. โครงการพลังงานแสงอาทิตย์สาธารณะของไทยขยายเป็น 10 GW `2026`",
+  "date": "2026-11-19",
+  "digest": "2026-11-19"
+ },
+ {
+  "url": "https://www.reuters.com/world/asia-pacific/thailand-adjusts-ev-policy-address-potential-oversupply-2025-11-25/",
+  "topic": "2. ปรับนโยบายส่งเสริมรถไฟฟ้าเพื่อป้องกันอุปทานเกิน `2025`",
+  "date": "2026-11-19",
+  "digest": "2026-11-19"
+ },
+ {
+  "url": "https://www.nstda.or.th/home/knowledge_post/10tech2026-2027-10/",
+  "topic": "3. SMR (Small Modular Reactor) – ความรู้พื้นฐาน `ความรู้พื้นฐาน`",
+  "date": "2026-11-19",
+  "digest": "2026-11-19"
+ }
 ]
