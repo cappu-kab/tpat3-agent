@@ -47,18 +47,26 @@ def th_date(d):
 def ask(effort, system, user, tag, search=False, max_tokens=16000):
     """One call; returns the text inside <tag>...</tag> (search narration and citation markers are discarded)."""
     kwargs = {"tools": [{"type": "browser_search"}], "tool_choice": "required"} if search else {}
-    r = client().chat.completions.create(
-        model=MODEL,
-        messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-        reasoning_effort=effort,
-        max_completion_tokens=max_tokens,
-        **kwargs,
+    for attempt in range(2):
+        r = client().chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+            reasoning_effort=effort,
+            max_completion_tokens=max_tokens,
+            **kwargs,
+        )
+        text = re.sub(r"【[^】]*】", "", r.choices[0].message.content or "")
+        m = re.search(rf"<{tag}>(.*?)</{tag}>", text, re.S)
+        if m:
+            return m.group(1).strip()
+        if tag in ("review", "quiz"):  # model sometimes drops the tags but still returns bare JSON
+            m = re.search(r"\{.*\}" if tag == "review" else r"\[.*\]", text, re.S)
+            if m:
+                return m.group(0)
+    raise RuntimeError(
+        f"no <{tag}> block after 2 attempts (finish_reason={r.choices[0].finish_reason}, "
+        f"{len(text)} chars): {text[:300]!r}"
     )
-    text = re.sub(r"【[^】]*】", "", r.choices[0].message.content or "")
-    m = re.search(rf"<{tag}>(.*?)</{tag}>", text, re.S)
-    if not m:
-        raise RuntimeError(f"no <{tag}> block in model output")
-    return m.group(1).strip()
 
 
 def loads(s):
@@ -85,7 +93,7 @@ def review(kind, content):
         + read("prompts/reviewer_checklist.md"),
         f"Kind: {kind}\n\n{content}",
         "review",
-        max_tokens=2000,
+        max_tokens=12000,
     )
     return loads(out)
 
