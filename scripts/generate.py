@@ -103,6 +103,16 @@ def review(kind, content):
     return loads(out)
 
 
+def topic_bank():
+    return [l.strip() for l in read("config/topics.md").splitlines() if l.strip() and not l.startswith("#")]
+
+
+def compact(md):
+    """Keep headings, หลักการ/ผลกระทบ lines and keyword blocks only (Groq free tier caps requests at 8000 tokens/min)."""
+    keep = ("## ", "- **หลักการ", "- **ผลกระทบ", "> **จุดสำคัญ")
+    return "\n".join(l for l in md.splitlines() if l.startswith(keep))
+
+
 # ---------- digest ----------
 def digest_issues(md):
     issues = []
@@ -135,7 +145,12 @@ def make_digest():
     d = today()
     used = json.loads(read("state/used_items.json")) if (ROOT / "state/used_items.json").exists() else []
     used_urls = [u["url"] for u in used if u["url"].startswith("http")]
-    foundational = [u["topic"] for u in used if u["url"].startswith("foundational:")][-6:]
+    recent_topics = [u["topic"] for u in used][-30:]
+    recent_text = " ".join(recent_topics)
+    fresh = [t for t in topic_bank() if t.split(" ")[0] not in recent_text] or topic_bank()
+    foundational = random.choice(fresh)
+    fields = random.sample(["พลังงาน", "ขนส่ง/EV", "AI/คอมพิวเตอร์", "สิ่งแวดล้อม/ชีววิทยา", "วัสดุศาสตร์", "การแพทย์/สาธารณสุข",
+                            "ฟิสิกส์/เคมี/รางวัลโนเบล", "ภัยพิบัติ/ธรณีวิทยา", "เทคโนโลยีป้องกันประเทศ/อากาศยาน", "อวกาศ", "นโยบายเทคโนโลยีไทย"], 3)
     system = (
         "You are the Worker producing a Thai daily STEM digest for TPAT3 students. Never invent news; "
         "every news item needs a real URL and publish date you saw via search. Write entirely in Thai "
@@ -143,10 +158,12 @@ def make_digest():
     )
     user = f"""Today is {d.isoformat()} (Thailand). Title line: '# สรุปข่าว TPAT3 ประจำวัน · {th_date(d)}'.
 Prioritise 2026 news, then 2025, then older. 3-4 items, order by year desc, max 1 foundational item.
-Cover varied fields (energy, transport/EV, AI, environment/biology, materials, space, Thai tech policy) - at most 1 space item.
+News items must come from DIFFERENT fields; today's required fields: {fields} (one news item each, search for the latest 2026/2025 news in that field). At most 1 space item; at most 1 EV/energy-policy item.
 Each item: '## N. title `YEAR`', 2-4 bullets with **bold** numbers, a '- **หลักการ:**' line, a '- **ผลกระทบ/ประโยชน์:**' line,
 a '> **จุดสำคัญที่ควรจำ / Keyword:** ...' block, and 'แหล่งข่าว: NAME, URL (date)'. Foundational item uses tag `ความรู้พื้นฐาน` and source line 'แหล่งข้อมูล: ...'.
-Do NOT reuse these URLs: {used_urls[-40:]}. Recent foundational topics (pick a different one): {foundational}.
+Do NOT reuse these URLs: {used_urls[-40:]}.
+Do NOT cover these recent subjects again (even from a different URL): {recent_topics}.
+The single foundational item MUST be about this topic: {foundational}.
 
 --- sources.md ---
 {read('config/sources.md')}
@@ -260,8 +277,9 @@ def quiz_issues(qs):
 
 def make_quiz():
     d = today()
-    digests = sorted((ROOT / "digests").glob("*.md"))[-7:]
-    material = "\n\n".join(p.read_text(encoding="utf-8") for p in digests)
+    digests = sorted((ROOT / "digests").glob("*.md"))[-4:]
+    material = "\n\n".join(compact(p.read_text(encoding="utf-8")) for p in digests)
+    found = "\n".join(random.sample(topic_bank(), 4))
     system = (
         "You are the Worker writing a Thai TPAT3 weekly quiz. Output ONLY one strictly valid JSON array inside <quiz></quiz> tags: "
         "no markdown fences, no comments, no trailing commas, no line breaks inside strings, and any double quote inside a string must be escaped with a backslash "
@@ -277,8 +295,8 @@ misconceptions, not absurd; no options that are also true; put the CORRECT optio
 
 --- digests ---
 {material}
---- topics.md ---
-{read('config/topics.md')}"""
+--- foundational topics to use (one question each) ---
+{found}"""
     qs = draft_quiz(system, user)
     for _ in range(2):
         issues = quiz_issues(qs)
@@ -288,7 +306,7 @@ misconceptions, not absurd; no options that are also true; put the CORRECT optio
     issues = quiz_issues(qs)
     if issues:
         sys.exit(f"quiz validation failed: {issues}")
-    rv = review("quiz (check every answer key is correct and unique)", json.dumps(qs, ensure_ascii=False, indent=1) + "\n\nSource digests:\n" + material)
+    rv = review("quiz (check every answer key is correct and unique)", json.dumps(qs, ensure_ascii=False, indent=1) + "\n\nSource digests:\n" + material[:3500])
     if not rv["approved"]:
         qs = draft_quiz(system, user + f"\n\nPrevious JSON:\n{json.dumps(qs, ensure_ascii=False)}\n\nReviewer issues to fix:\n{rv['issues']}")
         issues = quiz_issues(qs)
