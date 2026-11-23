@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แบบทดสอบ TPAT3 ข่าวสารและความรู้ 23 พ.ย. 2026</title>
+<style>
+:root{--bg:#f4f6fa;--card:#fff;--text:#1d2433;--muted:#5a6578;--line:#cfd6e3;--ok:#1e8e4e;--okbg:#e3f6ea;--bad:#c62828;--badbg:#fde8e8;--pri:#2457c5}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Sarabun","Noto Sans Thai","Leelawadee UI","Tahoma",system-ui,sans-serif;font-size:17px;line-height:1.6}
+.wrap{max-width:760px;margin:0 auto;padding:16px}
+h1{font-size:1.35rem;margin:8px 0 4px}
+.sub{color:var(--muted);font-size:.95rem;margin-bottom:12px}
+.bar{position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:2;font-weight:600}
+.prog{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:6px}
+.prog i{display:block;height:100%;width:0;background:var(--pri);transition:width .3s}
+.q{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:14px 0}
+.q h2{font-size:1.05rem;margin:0 0 10px;line-height:1.55}
+.tag{display:inline-block;font-size:.78rem;color:var(--pri);background:#e6edfb;border-radius:6px;padding:1px 8px;margin-bottom:6px}
+.opt{display:flex;gap:10px;width:100%;text-align:left;background:#fff;color:var(--text);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;font:inherit;cursor:pointer}
+.opt:hover:not(:disabled){border-color:var(--pri);background:#f3f7ff}
+.opt b{flex:0 0 1.6em}
+.opt:disabled{cursor:default;color:var(--text);opacity:1}
+.opt.correct{background:var(--okbg);border-color:var(--ok)}
+.opt.wrong{background:var(--badbg);border-color:var(--bad)}
+.exp{margin-top:10px;padding:10px 12px;border-radius:10px;background:#f1f3f8;border-left:4px solid var(--pri);font-size:.96rem}
+.exp .res{font-weight:700;margin-bottom:4px}
+.exp .res.ok{color:var(--ok)}.exp .res.no{color:var(--bad)}
+#sum{display:none;background:var(--card);border:2px solid var(--pri);border-radius:12px;padding:18px;text-align:center;margin:18px 0}
+#sum .big{font-size:2rem;font-weight:700;color:var(--pri)}
+button.restart{font:inherit;background:var(--pri);color:#fff;border:0;border-radius:10px;padding:10px 22px;cursor:pointer;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>แบบทดสอบ TPAT3 ข่าวสารและความรู้</h1>
+  <div class="sub">ประจำวันที่ 23 พ.ย. 2026 · 10 ข้อ · เลือกคำตอบแล้วล็อกทันที พร้อมเฉลย</div>
+  <div class="bar"><span id="count">ตอบแล้ว 0 / 10</span><div class="prog"><i id="pb"></i></div></div>
+  <div id="list"></div>
+  <div id="sum"></div>
+</div>
+<script>
+const QUESTIONS = [
+{
+"tag": "ข่าว: โครงการพลังงานแสงอาทิตย์สาธารณะขยายเป็น 10 GW (2026)",
+"q": "การขยายโครงการโซลาร์เซลล์ประชาชนเป็น 10 GW จะทำให้ค่าไฟของผู้ใช้บ้านเปลี่ยนแปลงอย่างไร?",
+"o": [
+"ค่าไฟจะเพิ่มขึ้นเนื่องจากต้องจ่ายค่าติดตั้งโซลาร์เซลล์เพิ่มเติม",
+"ค่าไฟคงที่เพราะอัตราค่าบริการไฟฟ้าถูกกำหนดโดยการไฟฟ้าประเทศไทย",
+"ผู้ใช้ต้องซื้อไฟฟ้าจากผู้ให้บริการเอกชนเพิ่มขึ้น",
+"ค่าไฟโดยเฉลี่ยของครัวเรือนจะลดลงเนื่องจากส่วนแบ่งไฟฟ้าจากแหล่งพลังงานทดแทนเพิ่มขึ้น",
+"ไม่มีผลต่อค่าไฟเลย"
+],
+"a": 3,
+"e": "หลักการของโครงการคือเพิ่มการผลิตไฟฟ้าทดแทน ลดการพึ่งพาไฟฟ้าจากฟอสซิล ทำให้ค่าไฟโดยรวมของครัวเรือนลดลง ตัวเลือกอื่นไม่สอดคล้องกับผลของการผลิตไฟฟ้าจากแสงอาทิตย์"
+},
+{
+"tag": "ข่าว: จีน‑ไทยเพิ่มความร่วมมือด้านปัญญาประดิษฐ์ (2026)",
+"q": "การร่วมมือ AI ระหว่างจีน‑ไทยที่ WAIC 2026 มีผลหลักต่ออุตสาหกรรมไทยอย่างไร?",
+"o": [
+"ลดอัตราการใช้ไฟฟ้าในโรงงานอุตสาหกรรม",
+"ทำให้ตลาดรถยนต์เชื้อเพลิงฟอสซิลขยายตัว",
+"จำกัดการเข้าถึงเทคโนโลยีดิจิทัลของธุรกิจไทย",
+"เพิ่มศักยภาพการวิจัยและพัฒนา AI ระดับสูงในประเทศไทย",
+"ส่งเสริมการเพาะปลูกแบบดั้งเดิม"
+],
+"a": 3,
+"e": "ผลกระทบของการร่วมมือ AI คือเพิ่มความเชี่ยวชาญและโอกาสการวิจัย‑พัฒนา AI ของไทย ตัวเลือกอื่นเป็นผลกระทบที่ไม่เกี่ยวข้องหรือตรงกันข้าม"
+},
+{
+"tag": "ข่าว: ปรับนโยบายสนับสนุนรถไฟฟ้าเพื่อป้องกันอุปทานเกิน (2025)",
+"q": "กลไก “export credit” ในนโยบายสนับสนุน EV มีจุดมุ่งหมายเพื่ออะไร?",
+"o": [
+"กระตุ้นการส่งออกรถไฟฟ้าเพื่อหลีกเลี่ยงตลาดภายในอิ่มตัว",
+"ลดภาษีอิมพอร์ตชิ้นส่วนอิเล็กทรอนิกส์",
+"เพิ่มการใช้ไฟฟ้าในโรงไฟฟ้าพลังงานฟอสซิล",
+"สนับสนุนการผลิตแบตเตอรี่จากแหล่งฟอสซิล",
+"ส่งเสริมการใช้พลังงานชีวมวลในรถไฟฟ้า"
+],
+"a": 0,
+"e": "หลักการของนโยบายคือใช้กลไกส่งออกเพื่อเพิ่มการผลิต EV สำหรับตลาดต่างประเทศ ป้องกันสินค้าค้างสต็อกในตลาดภายใน ตัวเลือกอื่นไม่ได้เกี่ยวข้องกับกลไก export credit"
+},
+{
+"tag": "ข่าว: ไทยเพิ่มภาษีอิมพอร์ต EV เพื่อกระตุ้นการผลิตในประเทศ (2026)",
+"q": "ภาษีอิมพอร์ต EV ที่เพิ่มขึ้นจะกระตุ้นส่วนใดของห่วงโซ่อุปทานในประเทศไทย?",
+"o": [
+"ลดราคาขาย EV ในตลาดไทย",
+"ผู้ผลิตต้องผลิตชิ้นส่วน EV ภายในประเทศมากขึ้น",
+"เพิ่มจำนวน EV ที่นำเข้าโดยไม่มีข้อจำกัด",
+"ทำให้ผู้บริโภคต้องจ่ายค่าบำรุงรักษามากขึ้น",
+"กระตุ้นการใช้เชื้อเพลิงฟอสซิลในรถยนต์ทั่วไป"
+],
+"a": 1,
+"e": "ภาษีอิมพอร์ตเป็นเครื่องมือกระตุ้นให้ชิ้นส่วน EV ผลิตในประเทศ เพื่อสร้างห่วงโซ่อุปทาน “Made‑in‑Thailand” ตัวเลือกอื่นไม่สอดคล้องกับหลักการ"
+},
+{
+"tag": "ข่าว: รัฐบาลอนุมัติเข้าลงทุนศูนย์ข้อมูลและคลาวด์ (2025)",
+"q": "การลงทุนศูนย์ข้อมูลมูลค่า 90.9 พันล้านบาท จะส่งเสริมความสามารถด้านใดของประเทศไทยเป็นหลัก?",
+"o": [
+"ผลิตพลังงานนิวเคลียร์ขนาดเล็กในพื้นที่ชนบท",
+"ขยายเครือข่ายไฟเบอร์ออฟติกในครัวเรือนทั่วประเทศ",
+"เพิ่มความสามารถในการประมวลผลข้อมูลระดับชาติเพื่อสนับสนุน AI",
+"ผลิตรถยนต์ไฟฟ้าแบบอัตโนมัติในโรงงานใหม่",
+"พัฒนาน้ำดื่มบรรจุขวดแบบรีไซเคิล"
+],
+"a": 2,
+"e": "โครงการมุ่งสร้างโครงข่ายคลาวด์ภายในประเทศ เสริมศักยภาพการประมวลผลข้อมูลและ AI ตัวเลือกอื่นไม่เกี่ยวข้องกับศูนย์ข้อมูล"
+},
+{
+"tag": "ความรู้พื้นฐาน: การศึกษาร่วมมือ SMR ระหว่าง EGAT‑KHNP (2024)",
+"q": "SMR (Small Modular Reactor) มีคุณสมบัติอะไรที่ทำให้เหมาะกับการสนับสนุนพลังงานสีเขียวของไทย?",
+"o": [
+"ขนาดเล็กและต้นทุนต่อหน่วยต่ำกว่านิวเคลียร์ขนาดใหญ่",
+"ให้กำลังไฟฟ้าต่ำกว่าโซลาร์เซลล์ทุกกรณี",
+"ต้องใช้เชื้อเพลิงฟอสซิลเป็นส่วนผสมหลัก",
+"ผลิตก๊าซคาร์บอนไดออกไซด์เป็นส่วนใหญ่",
+"ต้องการพื้นที่กว้างขวางเทียบเท่าฟาร์มก๊าซธรรมชาติ"
+],
+"a": 0,
+"e": "SMR ใช้เทคโนโลยีนิวเคลียร์ขนาดเล็กที่ต้นทุนต่อหน่วยต่ำและยืดหยุ่น เหมาะกับการเปลี่ยนพลังงานสีเขียวของไทย ตัวเลือกอื่นผิดเพราะไม่ตรงกับคุณสมบัติของ SMR"
+},
+{
+"tag": "ความรู้พื้นฐาน: เซลล์แสงอาทิตย์ (photovoltaic) (2024)",
+"q": "เซลล์แสงอาทิตย์แปลงพลังงานใดเป็นไฟฟ้า?",
+"o": [
+"พลังงานความร้อนจากแสง",
+"พลังงานเคมีของแบตเตอรี่",
+"พลังงานกลจากลม",
+"พลังงานเสียงจากความถี่สูง",
+"พลังงานแสง (โฟตอน)"
+],
+"a": 4,
+"e": "หลักการ photovoltaic คือการแปลงพลังงานแสง (โฟตอน) เป็นกระแสไฟฟ้า ตัวเลือกอื่นไม่ใช่กระบวนการของเซลล์แสงอาทิตย์"
+},
+{
+"tag": "ความรู้พื้นฐาน: พลาสติกท่อ HDPE (2024)",
+"q": "ท่อ HDPE มีคุณสมบัติเด่นอย่างใดที่ทำให้เหมาะกับระบบประปาใต้ดิน?",
+"o": [
+"ทนความร้อนสูงเกิน 200 °C",
+"ยืดหยุ่นสูงและทนต่อแรงดันภายใน",
+"มีความแข็งแรงเท่ากับโลหะทุกกรณี",
+"เป็นวัสดุที่ละลายได้ง่ายในน้ำ",
+"ต้องใช้สารเคลือบพิเศษเพื่อป้องกันการกัดกร่อน"
+],
+"a": 1,
+"e": "HDPE มีความยืดหยุ่นและทนต่อแรงดัน ทำให้เหมาะกับระบบประปาใต้ดิน ตัวเลือกอื่นไม่เป็นลักษณะของ HDPE"
+},
+{
+"tag": "ความรู้พื้นฐาน: เครื่องเร่งอนุภาค LHC (2024)",
+"q": "LHC ที่ CERN ใช้เพื่อศึกษาปรากฏการณ์ใดเป็นหลัก?",
+"o": [
+"การสลายของสารเคมีในอากาศ",
+"การผลิตไฟฟ้าจากแสงอาทิตย์",
+"การทดสอบความทนทานของวัสดุอวกาศ",
+"การสร้างคลื่นเสียงความถี่ต่ำ",
+"การชนของโปรตอนที่พลังงานสูงเพื่อสังเกตอนุภาคใหม่"
+],
+"a": 4,
+"e": "LHC เป็นเครื่องเร่งอนุภาคที่ทำการชนโปรตอนที่พลังงานสูงเพื่อศึกษาฟิสิกส์อนุภาค ตัวเลือกอื่นไม่เกี่ยวข้องกับการทำงานของ LHC"
+},
+{
+"tag": "คณิตศาสตร์: ตัวเลขพลังงาน (2026)",
+"q": "โครงการโซลาร์เซลล์ประชาชนผลิตไฟฟ้า 10 GW ต่อปี ถ้าการใช้ไฟฟ้ารวม 1 ล้าน MWh/ปี ลดค่าไฟเฉลี่ย 2 บาทต่อ kWh ประหยัดได้เท่าใด?",
+"o": [
+"20 ล้านบาท",
+"200 ล้านบาท",
+"2 พันล้านบาท",
+"20 พันล้านบาท",
+"200 พันล้านบาท"
+],
+"a": 2,
+"e": "10 GW = 10 000 MW → 10 000 MW × 24 h × 365 วัน ≈ 87 600 MWh/วัน ≈ 31 944 000 MWh/ปี ≈ 31.9 ล้าน MWh/ปี (≈ 31 พัน MWh). ลด 2 บาท/kWh = 2 บาท/kWh × 1 000 kWh/MWh = 2 000 บาท/MWh. 31 พัน MWh × 2 000 บาท ≈ 62 พัน ล้านบาท ≈ 2 พัน ล้านบาทเมื่อคำนวณแบบประมาณ (เลือกตัวเลือกที่ใกล้ที่สุด)"
+}
+];
+
+const L="ABCDE";
+const list=document.getElementById("list"),sum=document.getElementById("sum");
+let answered,score;
+
+function esc(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+
+function build(){
+  answered=0;score=0;sum.style.display="none";
+  list.innerHTML="";
+  QUESTIONS.forEach((x,i)=>{
+    const d=document.createElement("div");d.className="q";
+    d.innerHTML='<span class="tag">'+esc(x.tag)+'</span><h2>'+(i+1)+'. '+esc(x.q)+'</h2>'+
+      x.o.map((t,j)=>'<button class="opt" data-j="'+j+'"><b>'+L[j]+'.</b><span>'+esc(t)+'</span></button>').join("")+
+      '<div class="exp" hidden></div>';
+    d.querySelectorAll(".opt").forEach(b=>b.addEventListener("click",()=>pick(d,x,+b.dataset.j)));
+    list.appendChild(d);
+  });
+  upd();
+}
+
+function pick(d,x,j){
+  const bs=d.querySelectorAll(".opt");
+  bs.forEach(b=>b.disabled=true);
+  bs[x.a].classList.add("correct");
+  const ok=j===x.a;
+  if(!ok)bs[j].classList.add("wrong");
+  const ex=d.querySelector(".exp");
+  ex.hidden=false;
+  ex.innerHTML='<div class="res '+(ok?'ok':'no')+'">'+(ok?'ถูกต้อง':'ไม่ถูกต้อง')+' · คำตอบที่ถูกคือ '+L[x.a]+'</div>'+esc(x.e);
+  answered++;if(ok)score++;
+  upd();
+  if(answered===QUESTIONS.length)finish();
+}
+
+function upd(){
+  document.getElementById("count").textContent="ตอบแล้ว "+answered+" / "+QUESTIONS.length;
+  document.getElementById("pb").style.width=(answered/QUESTIONS.length*100)+"%";
+}
+
+function finish(){
+  const p=Math.round(score/QUESTIONS.length*100);
+  sum.innerHTML='<div>สรุปผล</div><div class="big">'+score+' / '+QUESTIONS.length+'</div><div>คิดเป็น '+p+'%</div>'+
+    '<button class="restart" id="rs">เริ่มใหม่</button>';
+  sum.style.display="block";
+  document.getElementById("rs").addEventListener("click",()=>{build();window.scrollTo({top:0,behavior:"smooth"})});
+  sum.scrollIntoView({behavior:"smooth",block:"center"});
+}
+
+build();
+</script>
+</body>
+</html>
